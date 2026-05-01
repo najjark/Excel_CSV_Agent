@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>💎</text></svg>">
+  <title>Data Analysis Agent</title>
+  <link rel="stylesheet" href="/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="app">
+
+  <header class="header">
+    <span class="header-title">Data Analysis Agent</span>
+    <div class="header-right">
+      <button class="help-btn" onclick="toggleHelp()" title="Help">?</button>
+    </div>
+  </header>
+
+  <div id="help-section" class="help-section" style="display:none">
+    <p class="help-intro">Try asking things like:</p>
+    <div class="help-chips">
+      <span class="help-chip">What is the total of [column]?</span>
+      <span class="help-chip">How many missing values are there?</span>
+      <span class="help-chip">Group by [column] and sum [column]</span>
+      <span class="help-chip">Show rows where [column] > X</span>
+      <span class="help-chip">How many duplicate rows are there?</span>
+      <span class="help-chip">What are the unique values in [column]?</span>
+    </div>
+  </div>
+
+  <section id="results-area" class="results">
+    <div class="empty-results-message">
+      <div class="empty-results-text">Upload a file and ask a question to get started</div>
+    </div>
+  </section>
+
+  <div class="input-bar">
+    <div class="files-bar">
+        <div id="file-list" class="file-pills">
+            <div class="empty-files-message">No files uploaded</div>
+        </div>
+        <div class="upload-pill" id="upload-zone">+ Upload</div>
+        <input type="file" id="file-input" accept=".csv,.xlsx,.xls" multiple style="display:none">
+    </div>
+    <div class="input-group">
+        <input id="question-input" type="text" placeholder="Ask a question about your data..." />
+        <button id="ask-btn" onclick="askQuestion()">Ask</button>
+    </div>
+</div>
+
+</div>
+<script src="script.js"></script>
+</body>
+</html>
