@@ -1,5 +1,7 @@
 const API = "http://127.0.0.1:5000";
 let abortController = null;
+let fileCache = {}; // Stores metadata so we don't spam the server on every hover
+let tooltipTimeout; // Add this at the top
 
 // ── Drag and Drop ──
 const uploadZone = document.getElementById("upload-zone");
@@ -64,6 +66,13 @@ function addFileBadge(name, rows, cols) {
     const badge = document.createElement("div");
     badge.className = "file-badge";
     badge.id = `badge-${name}`;
+    
+    badge.onmouseenter = () => handleHover(name, badge);
+    badge.onmouseleave = hideTooltip;
+
+    // Notice the onclick added to the badge itself
+    badge.onclick = () => previewFile(name);
+
     badge.innerHTML = `
         <span class="file-name">${name}</span>
         <span class="file-meta">${rows} rows · ${cols} cols</span>
@@ -119,7 +128,6 @@ async function askQuestion() {
     questionPreview.id = "question-preview";
     questionPreview.innerHTML = `<div class="question-bubble">${escapeHtml(question)}</div>`;
 
-
     // Show thinking card below question
     abortController = new AbortController();
     const thinking = document.createElement("div");
@@ -130,9 +138,6 @@ async function askQuestion() {
         <div class="thinking-text">Analysing...</div>
         <button class="cancel-btn" onclick="cancelRequest()">✕</button>
     `;
-
-    // area.insertBefore(questionPreview, area.firstChild);
-    // area.insertBefore(thinking, questionPreview.nextSibling);
 
     area.appendChild(questionPreview);
     area.appendChild(thinking);
@@ -317,6 +322,100 @@ function showWarning(message) {
         toast.style.transition = "opacity 0.5s ease";
         setTimeout(() => toast.remove(), 500);
     }, 4000);
+}
+
+
+async function handleHover(name, element) {
+    clearTimeout(tooltipTimeout);
+
+    // 1. Fetch data only if we don't have it[cite: 1, 2]
+    if (!fileCache[name]) {
+        try {
+            const res = await fetch(`${API}/inspect`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name }),
+                credentials: "include"
+            });
+            const data = await res.json();
+            if (data.error) return;
+            fileCache[name] = data;
+        } catch (e) { return; }
+    }
+
+    const data = fileCache[name];
+
+    // 2. Create the floating window
+    let tooltip = document.getElementById("file-tooltip") || document.createElement("div");
+    tooltip.id = "file-tooltip";
+    tooltip.className = "floating-tooltip";
+    
+    const cols = Object.entries(data.dtypes)
+        .map(([c, t]) => `<div class="tooltip-row"><strong>${c}</strong> <span>${t}</span></div>`)
+        .join("");
+
+    tooltip.innerHTML = `
+        <div class="tooltip-header">${name}</div>
+        ${cols}
+        <div class="tooltip-footer">Click to preview data</div>
+    `;
+
+    document.body.appendChild(tooltip);
+
+    // 3. Position it relative to the pill
+    const rect = element.getBoundingClientRect();
+    tooltip.style.left = `${rect.left}px`;
+
+    // THE FIX: Reduce the gap to 2px so the mouse doesn't "leave" the zone
+    tooltip.style.top = `${rect.top - tooltip.offsetHeight + 1}px`;
+
+    // NEW: Let the tooltip stay open if the mouse is OVER the tooltip itself
+    tooltip.onmouseenter = () => clearTimeout(tooltipTimeout);
+    tooltip.onmouseleave = hideTooltip;
+}
+
+function hideTooltip() {
+    tooltipTimeout = setTimeout(() => {
+        document.getElementById("file-tooltip")?.remove();
+    }, 600);
+}
+
+async function previewFile(name) {
+    hideTooltip(); // Close tooltip when modal opens
+    
+    // Check cache directly instead of calling handleHover
+    if (!fileCache[name]) {
+        try {
+            const res = await fetch(`${API}/inspect`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name }),
+                credentials: "include"
+            });
+            fileCache[name] = await res.json();
+        } catch (e) { return; }
+    }
+
+    const data = fileCache[name];
+    const modal = document.createElement("div");
+    modal.className = "modal-overlay";
+    modal.onclick = () => modal.remove(); // Click background to close
+
+    const content = document.createElement("div");
+    content.className = "modal-content";
+    content.onclick = (e) => e.stopPropagation(); // Don't close when clicking table
+
+    // Reuse your buildTable helper![cite: 2]
+    content.innerHTML = `
+        <div class="modal-header">
+            <h3>Preview: ${name}</h3>
+            <button onclick="this.closest('.modal-overlay').remove()">✕</button>
+        </div>
+        <div class="modal-body">${buildTable(data.preview)}</div>
+    `;
+
+    modal.appendChild(content);
+    document.body.appendChild(modal);
 }
 
 // ── Event Listeners ──

@@ -217,25 +217,7 @@ def get_df_info(dataframes):
     
     return "\n\n".join(info)
 
-# def ask_agent(question, dataframes, retries=3, delay=2):
 def ask_agent(question, dataframes, retries=2, delay=1):
-    # prompt = f"""
-    # SYSTEM: Python/Pandas Agent. Environment: Sandboxed.
-    # CONTEXT:
-    # {get_df_info(dataframes)}
-
-    # INSTRUCTIONS:
-    # 1. VALIDATION: If the question is conversational (e.g. "hi", "how are you") or unrelated to the data context provided, you MUST return ONLY the string: INVALID_QUESTION
-    # 2. TASK: If valid, write code to answer: "{question}"
-    # 3. OUTPUT: Assign the final result to the variable 'result'.
-
-    # STRICT CONSTRAINTS:
-    # - Output raw code only. NO markdown, NO backticks, NO text.
-    # - READ-ONLY: No 'inplace=True' or variable reassignment.
-    # - EFFICIENCY: No cross-joins or data expansion. Use .head(100) for large outputs.
-    # - Dataframes: Use only 'pd', 'np', and provided names.
-    # """
-    
     prompt = f"""
     You are a Python/Pandas code generator. Environment is sandboxed.
 
@@ -373,9 +355,6 @@ def ask():
     data = request.json
     if not data or "question" not in data:
         return jsonify({"error": "Missing question"}), 400
-
-    # if not get_dataframes():
-        # return jsonify({"error": "No files uploaded. Please upload a file first."}), 400    
     
     question = data["question"]
     if len(question) > 500:
@@ -412,13 +391,6 @@ def ask():
     
     except TimeoutException:
         return jsonify({"error": "Request timed out. Try a simpler question."}), 408
-    
-    # except RuntimeError as re:
-    #     if "Gemini" in str(re):
-    #         print(f"Gemini error: {re}")
-    #         return jsonify({"error": "T   e AI service is currently busy. Please try again in a moment."}), 503
-    #     print(f"Runtime error: {re}")
-    #     return jsonify({"error": "Something went wrong. Please try again."}), 500
     
     except RuntimeError as re:
         if str(re) == "Gemini API unavailable after multiple retries":
@@ -465,6 +437,45 @@ def remove():
     except Exception as e:
         print(f"Remove error: {e}")
         return jsonify({"error": "Could not remove file. Please try again."}), 500
+
+
+@app.route("/inspect", methods=["POST"])
+def inspect():
+    try:
+        data = request.json
+        name = data.get("name")
+        file_map = session.get("file_map", {})
+
+        if name not in file_map:
+            return jsonify({"error": "File not found"}), 404
+
+        file_path = file_map[name]
+        
+        # Read only the first 5 rows and the column names
+        df = pd.read_parquet(file_path)
+        
+        # Format datetime columns to be pretty (YYYY-MM-DD)
+        for col in df.select_dtypes(include=['datetime64']).columns:
+            df[col] = df[col].dt.strftime('%Y-%m-%d')
+    
+        # Prepare the preview data
+        preview = df.head(3).to_dict(orient="records")
+        columns = df.columns.tolist()
+        
+        # Make sure values (like Timestamps) are JSON-safe
+        preview = make_serializable(preview)
+
+        return jsonify({
+            "name": name,
+            "columns": columns,
+            "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
+            "preview": preview
+        })
+        
+    except Exception as e:
+        print(f"Inspection error: {e}")
+        return jsonify({"error": "Could not read file preview"}), 500
+
 
 @app.route("/script.js")
 def serve_js():
