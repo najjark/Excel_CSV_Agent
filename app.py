@@ -28,11 +28,11 @@ class TimeoutException(Exception):
 
 app = Flask(__name__)
 
-# 1. Define constants
+# Define constants
 UPLOAD_FOLDER = "stored_dataframes"
 SESSION_FOLDER = "flask_session"
 
-# 2. Define the cleanup logic
+# Define the cleanup logic
 def power_wash_storage():
     folders_to_clean = [UPLOAD_FOLDER, SESSION_FOLDER]
     for folder in folders_to_clean:
@@ -43,10 +43,10 @@ def power_wash_storage():
         except Exception as e:
             print(f"⚠️ Note: Could not clear {folder}: {e}")
 
-# 3. Configure Flask
+# Configure Flask
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 app.config["SESSION_TYPE"] = "filesystem"
-app.config["SESSION_FILE_DIR"] = SESSION_FOLDER  # Points Flask to your clean folder
+app.config["SESSION_FILE_DIR"] = SESSION_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=2)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -181,8 +181,8 @@ def execute_with_timeout(code, dataframes, timeout_seconds=5):
     p.join(timeout_seconds)
     
     if p.is_alive():
-        p.terminate() # kill process
-        p.join()    # wait for it to fully exit
+        p.terminate() # Kill process
+        p.join()    # Wait for it to fully exit
         raise TimeoutException("Code execution timed out and was killed.")
     
     # Check if process exited with an error but didn't return a result
@@ -255,7 +255,6 @@ def ask_agent(question, dataframes, retries=2, delay=1):
     raise RuntimeError("Gemini API unavailable after multiple retries")
 
 def execute_code(code, dataframes):
-    # if "INVALID_QUESTION" in code:
     if code.strip() == "INVALID_QUESTION":
         raise ValueError("Please ask a question related to your data.")
 
@@ -274,16 +273,16 @@ def execute_code(code, dataframes):
 
 
 @app.route("/upload", methods=["POST"])
-@limiter.limit("10 per minute")  # ADD THIS
+@limiter.limit("10 per minute")
 def upload():
     try:
         file = request.files.get("file")
         
-        # 1. Check if file exists first to avoid AttributeError
+        # Check if file exists first to avoid AttributeError
         if not file or file.filename == '':
             return jsonify({"error": "No file selected"}), 400
         
-        # 2. Check size safely
+        # Check size
         file.seek(0, os.SEEK_END)
         size_in_bytes = file.tell()
         file.seek(0)
@@ -291,7 +290,7 @@ def upload():
         if size_in_bytes > 5 * 1024 * 1024: # 5MB limit
             return jsonify({"error": "File size exceeds 5MB limit"}), 400
 
-        # 3. Session / User Setup
+        # Session / User Setup
         if "user_id" not in session:
             session["user_id"] = str(uuid.uuid4())
         
@@ -302,21 +301,21 @@ def upload():
         clean_name = re.sub(r'[^a-zA-Z0-9_]', '_', filename.split(".")[0])
         ext = filename.lower().split(".")[-1]
         
-        # 4. Processing
+        # Processing
         if ext == "csv":
-            # Peek is safe for CSV
+            # Peek for CSV
             df = pd.read_csv(io.BytesIO(file.read()))
         elif ext in ("xlsx", "xls"):
-            # Excel must be read in full (the 5MB limit protects you here)
+            # Excel must be read in full (with 5 MB limit)
             df = pd.read_excel(io.BytesIO(file.read()), engine = 'openpyxl')
         else:
             return jsonify({"error": "Unsupported file type"}), 400
 
-        # 5. Row/Column Validation (After loading)
+        # Row/Column Validation (After loading)
         if len(df) > 10000 or len(df.columns) > 100:
             return jsonify({"error": "File exceeds row (10k) or column (100) limits"}), 400
         
-        # 6. Save as Parquet
+        # Save as Parquet
         file_path = os.path.join(UPLOAD_FOLDER, f"{session['user_id']}_{clean_name}.parquet")
         df.to_parquet(file_path, index=False)        
 
@@ -365,7 +364,6 @@ def ask():
         return jsonify({"error": "No files uploaded. Please upload a file first."}), 400
     
     try:
-        # dataframes = get_dataframes()
         code = ask_agent(question, dataframes)
         result = execute_code(code, dataframes)
 
@@ -374,7 +372,7 @@ def ask():
         
         result = make_serializable(result)
         
-        # Simple size check (rough estimate)
+        # Size check
         if sys.getsizeof(str(result)) > 5 * 1024 * 1024: # 5MB limit
             return jsonify({"error": "Result is too large to display"}), 400
         
@@ -385,7 +383,7 @@ def ask():
         
         return jsonify({"code": code, "result": result})
 
-    # these are your own safe messages
+    # Custom Error Messages
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 400
     
@@ -417,18 +415,18 @@ def remove():
         if name in file_map:
             file_path = file_map[name]
             
-            # 1. Security Check: Ensure the file is actually inside our UPLOAD_FOLDER
+            # Security Check: Ensure the file is actually inside our UPLOAD_FOLDER
             abs_storage_dir = os.path.abspath(UPLOAD_FOLDER)
             abs_file_path = os.path.abspath(file_path)
             
             if not abs_file_path.startswith(abs_storage_dir):
                 return jsonify({"error": "Unauthorized file path"}), 403
 
-            # 2. Delete the physical file from disk
+            # Delete the physical file from disk
             if os.path.exists(file_path):
                 os.remove(file_path)
             
-            # 3. Remove from session and save
+            # Remove from session and save
             file_map.pop(name)
             session["file_map"] = file_map
             session.modified = True
@@ -451,10 +449,10 @@ def inspect():
 
         file_path = file_map[name]
         
-        # Read only the first 5 rows and the column names
+        # Read only the first 3 rows and the column names
         df = pd.read_parquet(file_path)
         
-        # Format datetime columns to be pretty (YYYY-MM-DD)
+        # Format datetime (YYYY-MM-DD)
         for col in df.select_dtypes(include=['datetime64']).columns:
             df[col] = df[col].dt.strftime('%Y-%m-%d')
     
@@ -462,7 +460,7 @@ def inspect():
         preview = df.head(3).to_dict(orient="records")
         columns = df.columns.tolist()
         
-        # Make sure values (like Timestamps) are JSON-safe
+        # Make sure values are JSON-safe
         preview = make_serializable(preview)
 
         return jsonify({

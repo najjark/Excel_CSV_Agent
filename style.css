@@ -1,4 +1,4 @@
-/* ── Variables ── */
+/* Variables */
 :root {
     --bg: #0d1117;
     --card: #161b22;
@@ -8,7 +8,7 @@
     --accent: #10b981;
 }
 
-/* ── Reset & Base ── */
+/* Reset & Base */
 * {
     box-sizing: border-box;
 }
@@ -22,7 +22,7 @@ body {
     overflow: hidden;
 }
 
-/* ── App Layout ── */
+/* App Layout */
 .app {
     display: flex;
     flex-direction: column;
@@ -34,7 +34,7 @@ body {
     border-right: 1px solid var(--border);
 }
 
-/* ── Header ── */
+/*  Header */
 .header {
     display: flex;
     justify-content: space-between;
@@ -78,7 +78,7 @@ body {
     background: #4338ca;
 }
 
-/* ── Help Section ── */
+/* Help Section */
 .help-section {
     padding: 12px 20px;
     border-bottom: 1px solid var(--border);
@@ -113,7 +113,7 @@ body {
     background: #30363d;
 }
 
-/* ── Files Bar ── */
+/* Files Bar */
 .files-bar {
     display: flex;
     align-items: center;
@@ -133,7 +133,7 @@ body {
     opacity: 0.7;
 }
 
-/* ── File Badge (pill style) ── */
+/* File Badge */
 .file-badge {
     display: flex;
     align-items: center;
@@ -191,7 +191,7 @@ body {
     opacity: 1;
 }
 
-/* ── Upload Pill ── */
+/* Upload Button */
 .upload-pill {
     display: flex;
     align-items: center;
@@ -212,7 +212,7 @@ body {
     background: #1f2937;
 }
 
-/* ── Results / Chat Area ── */
+/* Results / Chat Area */
 .results {
     flex: 1;
     padding: 24px 20px;
@@ -222,7 +222,7 @@ body {
     gap: 20px;
 }
 
-/* ── Empty State ── */
+/* Empty State */
 .empty-results-message {
     display: flex;
     align-items: center;
@@ -237,7 +237,7 @@ body {
     font-weight: 500;
 }
 
-/* ── Chat Bubbles ── */
+/* Chat Bubbles */
 .result-card {
     display: flex;
     flex-direction: column;
@@ -290,7 +290,7 @@ body {
     color: #ef4444;
 }
 
-/* ── Result Content Types ── */
+/* Result Content Types */
 .result-answer {
     font-size: 0.95em;
     color: var(--text);
@@ -364,7 +364,7 @@ body {
     text-decoration: underline;
 }
 
-/* ── Table ── */
+/* Table */
 .table-container {
     overflow-x: auto;
     margin-top: 4px;
@@ -400,7 +400,7 @@ body {
     border-bottom: none;
 }
 
-/* ── Code Block ── */
+/* Code Block */
 .code-accordion {
     margin-top: 12px;
     border-top: 1px solid var(--border);
@@ -455,7 +455,6 @@ body {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--border);
-
     background: #0d1117;
     border-color: #30363d;
 }
@@ -482,7 +481,7 @@ body {
     overflow-x: auto;
 }
 
-/* ── Thinking / Loading ── */
+/* Thinking / Loading */
 .thinking-card {
     align-self: flex-start;
     border: 1px solid var(--border);
@@ -510,7 +509,6 @@ body {
 
 .thinking-text {
     font-size: 13px;
-    /* color: var(--muted); */
     color: #8b949e;
     font-weight: 500;
 }
@@ -537,7 +535,7 @@ body {
     cursor: not-allowed;
 }
 
-/* ── Input Bar ── */
+/* Input Bar */
 .input-bar {
     padding: 12px 20px 14px;
     border-top: 1px solid var(--border);
@@ -591,7 +589,7 @@ body {
     background: #4338ca;
 }
 
-/* ── Toast ── */
+/* Toast */
 .toast-notification {
     position: fixed;
     bottom: 100px;
@@ -608,7 +606,7 @@ body {
     animation: slideUpToast 0.3s ease-out;
 }
 
-/* ── Animations ── */
+/* Animations */
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
@@ -635,7 +633,7 @@ body {
     100% { transform: scale(1); box-shadow: 0 0 0px transparent; }
 }
 
-/* ── Animation Classes ── */
+/* Animation Classes */
 .nudge-active {
     animation: subtle-nudge 0.4s cubic-bezier(.36,.07,.19,.97) both;
     border-color: var(--accent) !important;
@@ -659,33 +657,39 @@ body {
     border-radius: 4px;
 }
 
-
 /* Floating Column Tooltip */
 .floating-tooltip {
     position: fixed;
     background: #1e252b;
     border: 1px solid var(--accent);
-    padding: 12px;
     border-radius: 8px;
     z-index: 1000;
     pointer-events: auto;
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     min-width: 180px;
     max-height: 300px;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
     padding-right: 8px;
+    overflow: hidden;
 }
 
-/* Apply your custom scrollbar to the tooltip */
-.floating-tooltip::-webkit-scrollbar {
+.tooltip-body {
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 10px;
+}
+
+.tooltip-body::-webkit-scrollbar {
     width: 4px;
 }
 
-.floating-tooltip::-webkit-scrollbar-track {
+.tooltip-body::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.floating-tooltip::-webkit-scrollbar-thumb {
+.tooltip-body::-webkit-scrollbar-thumb {
     background: #30363d;
     border-radius: 4px;
 }
@@ -722,7 +726,6 @@ body {
     color: #8b949e;
 }
 
-
 /* Modal Overlay (Background) */
 .modal-overlay {
     position: fixed;
@@ -746,11 +749,6 @@ body {
     border-radius: 12px;
     border: 1px solid #30363d;
     box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-    position: fixed;
-    top: 45%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    margin: 0;
 }
 
 .modal-header {
@@ -775,9 +773,15 @@ body {
 }
 
 .modal-body {
-    padding: 20px;
+    padding: 15px;
     max-height: 400px;
-    overflow: hidden !important;
+    overflow: hidden;
+}
+
+.modal-body .result-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0;
 }
 
 .modal-body .result-table thead th {
@@ -796,23 +800,19 @@ body {
 .modal-body .table-container {
     max-height: 100%;
     overflow: auto;
+    padding: 10px;
 }
 
 .modal-body .table-container::-webkit-scrollbar {
-    width: 4px;
-    height: 8px;
-}
-
-.modal-body .table-container::-webkit-scrollbar-track {
-    background: transparent;
+    width: 3px;
+    height: 6px;
 }
 
 .modal-body .table-container::-webkit-scrollbar-thumb {
-    background: rgba(139, 148, 158, 0.6);
+    background: rgba(139, 148, 158, 0.35);
     border-radius: 999px;
 }
 
 .modal-body .table-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(139, 148, 158, 0.9);
-    box-shadow: 0 0 8px rgba(139, 148, 158, 0.8);
+    background: rgba(139, 148, 158, 0.6);
 }

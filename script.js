@@ -1,9 +1,9 @@
 const API = "http://127.0.0.1:5000";
 let abortController = null;
-let fileCache = {}; // Stores metadata so we don't spam the server on every hover
-let tooltipTimeout; // Add this at the top
+let fileCache = {};
+let tooltipTimeout;
 
-// ── Drag and Drop ──
+// Drag and Drop
 const uploadZone = document.getElementById("upload-zone");
 uploadZone.addEventListener("dragover", e => { e.preventDefault(); uploadZone.style.borderColor = "var(--accent)"; });
 uploadZone.addEventListener("dragleave", () => { uploadZone.style.borderColor = "var(--border)"; });
@@ -22,7 +22,7 @@ document.getElementById("upload-zone").addEventListener("click", () => {
     document.getElementById("file-input").click();
 });
 
-// ── File Upload ──
+// File Upload
 async function uploadFile(file) {
     const incomingBaseName = file.name.trim().replace(/\.[^/.]+$/, "").replace(/\s+/g, '_');
 
@@ -70,7 +70,6 @@ function addFileBadge(name, rows, cols) {
     badge.onmouseenter = () => handleHover(name, badge);
     badge.onmouseleave = hideTooltip;
 
-    // Notice the onclick added to the badge itself
     badge.onclick = () => previewFile(name);
 
     badge.innerHTML = `
@@ -96,7 +95,7 @@ async function removeFile(name, event) {
     }
 }
 
-// ── Ask Question ──
+// Ask Question
 async function askQuestion() {
     const input = document.getElementById("question-input");
     const question = input.value.trim();
@@ -192,7 +191,7 @@ function cancelRequest() {
     }
 }
 
-// ── Results ──
+// Results
 function addResult(question, result, code, error) {
     const card = document.createElement("div");
     card.className = "result-card";
@@ -244,7 +243,7 @@ function removeResult(btn) {
     }
 }
 
-// ── Build Helpers ──
+// Build Helpers
 function buildTable(data) {
     if (!data.length) return `<div class="result-answer">No results found.</div>`;
     const headers = Object.keys(data[0]);
@@ -291,7 +290,7 @@ function escapeHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// ── UI Helpers ──
+// UI Helpers
 function toggleHelp() {
     const help = document.getElementById("help-section");
     const btn = document.querySelector(".help-btn");
@@ -324,11 +323,10 @@ function showWarning(message) {
     }, 4000);
 }
 
-
 async function handleHover(name, element) {
     clearTimeout(tooltipTimeout);
 
-    // 1. Fetch data only if we don't have it[cite: 1, 2]
+    //  Fetch data only if we don't have it
     if (!fileCache[name]) {
         try {
             const res = await fetch(`${API}/inspect`, {
@@ -345,7 +343,7 @@ async function handleHover(name, element) {
 
     const data = fileCache[name];
 
-    // 2. Create the floating window
+    // Create the floating window
     let tooltip = document.getElementById("file-tooltip") || document.createElement("div");
     tooltip.id = "file-tooltip";
     tooltip.className = "floating-tooltip";
@@ -356,20 +354,19 @@ async function handleHover(name, element) {
 
     tooltip.innerHTML = `
         <div class="tooltip-header">${name}</div>
-        ${cols}
-        <div class="tooltip-footer">Click to preview data</div>
+        <div class="tooltip-body">
+            ${cols}
+        </div>
+        <div class="tooltip-footer">Click file to preview data</div>
     `;
 
     document.body.appendChild(tooltip);
 
-    // 3. Position it relative to the pill
     const rect = element.getBoundingClientRect();
     tooltip.style.left = `${rect.left}px`;
 
-    // THE FIX: Reduce the gap to 2px so the mouse doesn't "leave" the zone
     tooltip.style.top = `${rect.top - tooltip.offsetHeight + 1}px`;
 
-    // NEW: Let the tooltip stay open if the mouse is OVER the tooltip itself
     tooltip.onmouseenter = () => clearTimeout(tooltipTimeout);
     tooltip.onmouseleave = hideTooltip;
 }
@@ -377,13 +374,13 @@ async function handleHover(name, element) {
 function hideTooltip() {
     tooltipTimeout = setTimeout(() => {
         document.getElementById("file-tooltip")?.remove();
-    }, 600);
+    }, 300);
 }
 
 async function previewFile(name) {
     hideTooltip(); // Close tooltip when modal opens
     
-    // Check cache directly instead of calling handleHover
+    // Check cache directly
     if (!fileCache[name]) {
         try {
             const res = await fetch(`${API}/inspect`, {
@@ -405,7 +402,6 @@ async function previewFile(name) {
     content.className = "modal-content";
     content.onclick = (e) => e.stopPropagation(); // Don't close when clicking table
 
-    // Reuse your buildTable helper![cite: 2]
     content.innerHTML = `
         <div class="modal-header">
             <h3>Preview: ${name}</h3>
@@ -418,7 +414,7 @@ async function previewFile(name) {
     document.body.appendChild(modal);
 }
 
-// ── Event Listeners ──
+// Event Listeners 
 document.getElementById("question-input").addEventListener("keydown", e => {
     if (e.key === "Enter") {
         const btn = document.getElementById("ask-btn");
