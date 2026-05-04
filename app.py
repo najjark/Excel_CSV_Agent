@@ -229,7 +229,7 @@ def ask_agent(question, dataframes, retries=2, delay=1):
     - Output raw Python only. No markdown, no backticks, no explanation.
     - Assign final result to 'result'.
     - Read-only: no inplace=True. Use only 'pd', 'np', and the provided dataframe names.
-
+    - CRITICAL: Before merging or joining on ID columns, ensure both columns are the same type (e.g., use .astype(str)) to avoid merge errors.
     QUESTION: {question}
     """
         
@@ -270,12 +270,28 @@ def execute_code(code, dataframes):
     except Exception as e:
         raise e
 
+def cleanup_old_files(max_age_hours=1):
+    now = time.time()
+    max_age = max_age_hours * 3600
 
+    for filename in os.listdir(UPLOAD_FOLDER):
+        path = os.path.join(UPLOAD_FOLDER, filename)
+
+        try:
+            if os.path.isfile(path):
+                file_age = now - os.path.getmtime(path)
+                if file_age > max_age:
+                    os.remove(path)
+        except Exception as e:
+            print(f"Cleanup error: {e}")
 
 @app.route("/upload", methods=["POST"])
 @limiter.limit("10 per minute")
 def upload():
     try:
+        # Cleanup old files first
+        cleanup_old_files()
+        
         file = request.files.get("file")
         
         # Check if file exists first to avoid AttributeError
@@ -354,19 +370,44 @@ def ask():
     data = request.json
     if not data or "question" not in data:
         return jsonify({"error": "Missing question"}), 400
-    
+
     question = data["question"]
     if len(question) > 500:
         return jsonify({"error": "Question too long"}), 400
+
+    # Cleanup old files first
+    cleanup_old_files()
+
+    # Clean session + keep active files alive
+    file_map = session.get("file_map", {})
+    valid_paths = {}
+
+    for name, path in file_map.items():
+        if os.path.exists(path):
+            os.utime(path, None)  # refresh last-used time
+            valid_paths[name] = path
+
+    session["file_map"] = valid_paths
+
+    if valid_paths != file_map:
+        session["file_map"] = valid_paths
+        session.modified = True
     
+    # Now load dataframes
     dataframes = get_dataframes()
     if not dataframes:
         return jsonify({"error": "No files uploaded. Please upload a file first."}), 400
-    
+
     try:
         code = ask_agent(question, dataframes)
         result = execute_code(code, dataframes)
 
+        # Detect which dataframes were used in the generated code
+        used_files = []
+        for name in dataframes.keys():
+            if re.search(rf"\b{name}\b", code):
+                used_files.append(name)
+        
         if isinstance(result, list) and len(result) > 500:
             result = result[:500]
         
@@ -380,22 +421,33 @@ def ask():
             result = result.tolist()
         elif isinstance(result, np.ndarray):
             result = result.tolist()
+                
+        return jsonify({
+            "code": code,
+            "result": result,
+            "used_files": used_files
+        })
         
-        return jsonify({"code": code, "result": result})
-
     # Custom Error Messages
     except ValueError as ve:
-        return jsonify({"error": str(ve)}), 400
+        return jsonify({"error": "Analysis failed, please try a simpler and check your files."}), 400
     
     except TimeoutException:
         return jsonify({"error": "Request timed out. Try a simpler question."}), 408
-    
-    except RuntimeError as re:
-        if str(re) == "Gemini API unavailable after multiple retries":
-            return jsonify({"error": "The AI service is currently busy. Please try again in a moment."}), 503
-        print(f"Runtime error: {re}")
-        return jsonify({"error": "Something went wrong. Please try again."}), 500
 
+    except RuntimeError as re_err:
+        # Log error to check in terminal
+        print(f"Logging technical error: {re_err}") 
+
+        # Check if API related
+        if str(re_err) == "Gemini API unavailable after multiple retries":
+            return jsonify({"error": "The AI service is currently busy. Please try again in a moment."}), 503
+        
+        # For all other code execution errors (like merge/type errors), send a safe message to the UI
+        return jsonify({
+            "error": "Analysis failed due to data inconsistency (e.g., mismatched column types). Please check your files."
+        }), 500
+    
     except Exception as e:
         print(f"Internal error: {e}")
         return jsonify({"error": "Something went wrong. Please try again."}), 500

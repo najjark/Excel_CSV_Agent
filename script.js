@@ -82,13 +82,24 @@ function addFileBadge(name, rows, cols) {
 
 async function removeFile(name, event) {
     event.stopPropagation();
+    
+    // Kill the tooltip immediately so it doesn't get stuck
+    hideTooltip(); 
+    // Clear the timeout to ensure it disappears instantly
+    clearTimeout(tooltipTimeout);
+    document.getElementById("file-tooltip")?.remove();
+
     await fetch(`${API}/remove`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
         credentials: "include"
     });
+
     document.getElementById(`badge-${name}`)?.remove();
+    
+    // Clear the cache so the deleted file info isn't taking up RAM
+    delete fileCache[name];
 
     if (!document.querySelector(".file-badge")) {
         document.getElementById("file-list").innerHTML = `<div class="empty-files-message">No files uploaded</div>`;
@@ -154,8 +165,9 @@ async function askQuestion() {
 
         document.getElementById("question-preview")?.remove();
         document.getElementById("thinking-state")?.remove();
-
-        if (data.error === "Please ask a question related to your data.") {
+        
+        // Check if question is unrelated to data
+        if (data.error === "Analysis failed, please try a simpler and check your files.") {
             showWarning("I'm a Data Agent! Please ask a question related to your files.");
             btn.disabled = false;
             input.disabled = false;
@@ -163,7 +175,7 @@ async function askQuestion() {
             return;
         }
 
-        addResult(question, data.result, data.code, data.error);
+        addResult(question, data.result, data.code, data.error, data.used_files);
 
     } catch (e) {
         document.getElementById("question-preview")?.remove();
@@ -192,7 +204,7 @@ function cancelRequest() {
 }
 
 // Results
-function addResult(question, result, code, error) {
+function addResult(question, result, code, error, used_files = []) {
     const card = document.createElement("div");
     card.className = "result-card";
 
@@ -211,12 +223,23 @@ function addResult(question, result, code, error) {
         resultHTML = `<div class="result-answer">${result}</div>`;
     }
 
+    const usedFilesHTML = used_files && used_files.length ? `
+        <div class="used-files">
+            <div class="used-chips">
+                ${used_files.map(f => `<span class="file-chip">${escapeHtml(f)}</span>`).join("")}
+            </div>
+        </div>
+    ` : "";
+
     card.innerHTML = `
         <div class="question-bubble">${escapeHtml(question)}</div>
         <div class="answer-bubble">
             <button class="bubble-remove" onclick="removeResult(this)">✕</button>
+            ${usedFilesHTML}
             ${resultHTML}
             ${(code && !isInvalid) ? `
+
+
             <details class="code-accordion">
                 <summary>View analysis logic</summary>
                 <div class="code-block">
@@ -374,7 +397,7 @@ async function handleHover(name, element) {
 function hideTooltip() {
     tooltipTimeout = setTimeout(() => {
         document.getElementById("file-tooltip")?.remove();
-    }, 300);
+    }, 200);
 }
 
 async function previewFile(name) {
