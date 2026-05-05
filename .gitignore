@@ -3,3 +3,4 @@ stored_dataframes/
 flask_session/
 __pycache__/
 *.pyc
+.vscode/
