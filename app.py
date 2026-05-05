@@ -249,7 +249,7 @@ def execute_code(code, dataframes):
     validate_code(code)
 
     try:
-        result = execute_with_timeout(code, dataframes, 5)
+        result = execute_with_timeout(code, dataframes, 30)
 
         if result is None:
             raise ValueError("Code ran but did not produce a result")
@@ -259,6 +259,10 @@ def execute_code(code, dataframes):
         raise e
 
 def cleanup_old_files(max_age_hours=1):
+    if not os.path.exists(UPLOAD_FOLDER):
+        pathlib.Path(UPLOAD_FOLDER).mkdir(exist_ok=True)
+        return
+    
     now = time.time()
     max_age = max_age_hours * 3600
 
@@ -338,10 +342,10 @@ def make_serializable(obj):
         return int(obj)
     if isinstance(obj, (np.floating)):
         return round(float(obj), 4)
-    
     if isinstance(obj, (pd.Timestamp, datetime.datetime)):
         return obj.isoformat()
-    
+    if isinstance(obj, pd.Period):
+        return str(obj)
     if isinstance(obj, np.ndarray):
         return obj.tolist()
     if isinstance(obj, list):
