@@ -8,6 +8,16 @@ This data agent lets you upload CSV or Excel files and query them conversational
 
 You can also inspect any uploaded file by hovering over it (column names and types) or clicking it (data preview), and the generated code is always visible so you can see exactly how your answer was derived.
 
+## Screenshots
+
+<div align="center">
+  <img src="screenshots/main_page.png" width="900"/>
+  <img src="screenshots/sample_question.png" width="900"/>
+  <img src="screenshots/answer_with_analysis.png" width="900"/>
+  <img src="screenshots/data_preview.png" width="900"/>
+</div>
+
+
 ## Features
 
 **Upload & inspect files**
