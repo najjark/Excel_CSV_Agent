@@ -32,6 +32,10 @@ app = Flask(__name__)
 UPLOAD_FOLDER = "stored_dataframes"
 SESSION_FOLDER = "flask_session"
 
+# file paths
+pathlib.Path(UPLOAD_FOLDER).mkdir(exist_ok=True)
+pathlib.Path(SESSION_FOLDER).mkdir(exist_ok=True)
+
 # Define the cleanup logic
 def power_wash_storage():
     folders_to_clean = [UPLOAD_FOLDER, SESSION_FOLDER]
