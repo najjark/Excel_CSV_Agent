@@ -170,7 +170,7 @@ def run_code_process(code, dataframes, result_queue):
     except Exception as e:
         result_queue.put({"success": False, "error": str(e)})
 
-def execute_with_timeout(code, dataframes, timeout_seconds=5):
+def execute_with_timeout(code, dataframes, timeout_seconds=30):
     result_queue = multiprocessing.Queue()
     
     # Create the process
