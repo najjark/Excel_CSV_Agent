@@ -1,4 +1,4 @@
-const API = "http://127.0.0.1:5000";
+const API = "https://data-agent-snfs.onrender.com";
 let abortController = null;
 let fileCache = {};
 let tooltipTimeout;
