@@ -15,7 +15,7 @@ from datetime import timedelta
 import time
 import ast
 from werkzeug.utils import secure_filename
-import multiprocessing
+# import multiprocessing
 import uuid
 import pathlib
 import shutil
@@ -132,75 +132,132 @@ def validate_code(code):
             if node.attr.startswith("__") or node.attr in forbidden_attrs:
                 raise ValueError(f"Forbidden attribute access: {node.attr}")
 
-def run_code_process(code, dataframes, result_queue):
-    try:
-        import pandas as pd
-        import numpy as np
-        from RestrictedPython import compile_restricted, safe_builtins, utility_builtins
-        from RestrictedPython.Guards import guarded_iter_unpack_sequence
-        from RestrictedPython.Eval import default_guarded_getitem, default_guarded_getiter
+# def run_code_process(code, dataframes, result_queue):
+#     try:
+#         import pandas as pd
+#         import numpy as np
+#         from RestrictedPython import compile_restricted, safe_builtins, utility_builtins
+#         from RestrictedPython.Guards import guarded_iter_unpack_sequence
+#         from RestrictedPython.Eval import default_guarded_getitem, default_guarded_getiter
 
-        for func in ['read_csv', 'read_excel', 'read_json', 'read_sql', 'read_pickle', 'to_csv', 'to_excel']:
-            setattr(pd, func, None)
+#         for func in ['read_csv', 'read_excel', 'read_json', 'read_sql', 'read_pickle', 'to_csv', 'to_excel']:
+#             setattr(pd, func, None)
 
-        builtins = safe_builtins.copy()
-        builtins.update(utility_builtins)
+#         builtins = safe_builtins.copy()
+#         builtins.update(utility_builtins)
         
-        safe_globals = {
-            "__builtins__": builtins,
-            "pd": pd,
-            "np": np,
-            "_getitem_": default_guarded_getitem,
-            "_getiter_": default_guarded_getiter,
-            "_write_": lambda x: x,
-            "_iter_unpack_sequence_": guarded_iter_unpack_sequence,
-            **dataframes
-        }
+#         safe_globals = {
+#             "__builtins__": builtins,
+#             "pd": pd,
+#             "np": np,
+#             "_getitem_": default_guarded_getitem,
+#             "_getiter_": default_guarded_getiter,
+#             "_write_": lambda x: x,
+#             "_iter_unpack_sequence_": guarded_iter_unpack_sequence,
+#             **dataframes
+#         }
         
-        compiled = compile_restricted(code, '<string>', 'exec')
-        exec(compiled, safe_globals)
+#         compiled = compile_restricted(code, '<string>', 'exec')
+#         exec(compiled, safe_globals)
         
-        raw_result = safe_globals.get("result", None)
+#         raw_result = safe_globals.get("result", None)
         
-        if isinstance(raw_result, pd.DataFrame):
-            raw_result = raw_result.head(100).to_dict(orient="records")
+#         if isinstance(raw_result, pd.DataFrame):
+#             raw_result = raw_result.head(100).to_dict(orient="records")
 
-        result_queue.put({"success": True, "data": raw_result})
+#         result_queue.put({"success": True, "data": raw_result})
         
-    except Exception as e:
-        result_queue.put({"success": False, "error": str(e)})
+#     except Exception as e:
+#         result_queue.put({"success": False, "error": str(e)})
+
+# def execute_with_timeout(code, dataframes, timeout_seconds=30):
+#     result_queue = multiprocessing.Queue()
+    
+#     # Create the process
+#     p = multiprocessing.Process(
+#         target=run_code_process, 
+#         args=(code, dataframes, result_queue)
+#     )
+
+#     p.start()
+    
+#     # Wait for the process to finish or timeout
+#     p.join(timeout_seconds)
+    
+#     if p.is_alive():
+#         p.terminate() # Kill process
+#         p.join()    # Wait for it to fully exit
+#         raise TimeoutException("Code execution timed out and was killed.")
+    
+#     # Check if process exited with an error but didn't return a result
+#     if p.exitcode != 0 and result_queue.empty():
+#         raise RuntimeError(f"Worker process crashed with exit code {p.exitcode}")
+    
+#     if not result_queue.empty():
+#         res = result_queue.get()
+#         if res["success"]:
+#             return res["data"]
+#         else:
+#             raise RuntimeError(res["error"])
+    
+#     raise RuntimeError("Process exited without returning a result.")
+
+
+import threading
 
 def execute_with_timeout(code, dataframes, timeout_seconds=30):
-    result_queue = multiprocessing.Queue()
+    result_container = {"result": None, "error": None}
     
-    # Create the process
-    p = multiprocessing.Process(
-        target=run_code_process, 
-        args=(code, dataframes, result_queue)
-    )
+    def run():
+        try:
+            import pandas as pd
+            import numpy as np
+            from RestrictedPython import compile_restricted, safe_builtins, utility_builtins
+            from RestrictedPython.Guards import guarded_iter_unpack_sequence
+            from RestrictedPython.Eval import default_guarded_getitem, default_guarded_getiter
 
-    p.start()
+            for func in ['read_csv', 'read_excel', 'read_json', 'read_sql', 'read_pickle', 'to_csv', 'to_excel']:
+                setattr(pd, func, None)
+
+            builtins = safe_builtins.copy()
+            builtins.update(utility_builtins)
+            
+            safe_globals = {
+                "__builtins__": builtins,
+                "pd": pd,
+                "np": np,
+                "_getitem_": default_guarded_getitem,
+                "_getiter_": default_guarded_getiter,
+                "_write_": lambda x: x,
+                "_iter_unpack_sequence_": guarded_iter_unpack_sequence,
+                **dataframes
+            }
+            
+            compiled = compile_restricted(code, '<string>', 'exec')
+            exec(compiled, safe_globals)
+            
+            raw_result = safe_globals.get("result", None)
+            
+            if isinstance(raw_result, pd.DataFrame):
+                raw_result = raw_result.head(100).to_dict(orient="records")
+
+            result_container["result"] = raw_result
+
+        except Exception as e:
+            result_container["error"] = str(e)
+
+    thread = threading.Thread(target=run)
+    thread.start()
+    thread.join(timeout_seconds)
     
-    # Wait for the process to finish or timeout
-    p.join(timeout_seconds)
+    if thread.is_alive():
+        raise TimeoutException("Code execution timed out.")
     
-    if p.is_alive():
-        p.terminate() # Kill process
-        p.join()    # Wait for it to fully exit
-        raise TimeoutException("Code execution timed out and was killed.")
+    if result_container["error"]:
+        raise RuntimeError(result_container["error"])
     
-    # Check if process exited with an error but didn't return a result
-    if p.exitcode != 0 and result_queue.empty():
-        raise RuntimeError(f"Worker process crashed with exit code {p.exitcode}")
-    
-    if not result_queue.empty():
-        res = result_queue.get()
-        if res["success"]:
-            return res["data"]
-        else:
-            raise RuntimeError(res["error"])
-    
-    raise RuntimeError("Process exited without returning a result.")
+    return result_container["result"]
+
 
 def get_df_info(dataframes):
     info = []
@@ -550,5 +607,5 @@ if __name__ == "__main__":
         print("🚀 First boot: Cleaning up old session data...")
         power_wash_storage()
     
-    multiprocessing.freeze_support() 
+    # multiprocessing.freeze_support() 
     app.run(host="127.0.0.1", port=5000, debug=True)
