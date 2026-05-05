@@ -53,6 +53,17 @@ async function uploadFile(file) {
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         addFileBadge(data.name, data.rows, data.cols);
+        
+        // Pre-cache file inspection data
+        fetch(`${API}/inspect`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: data.name }),
+            credentials: "include"
+        }).then(r => r.json()).then(inspectData => {
+            if (!inspectData.error) fileCache[data.name] = inspectData;
+        }).catch(() => {});
+
     } catch (e) {
         alert(`Failed to upload ${file.name}: ${e.message}`);
     }

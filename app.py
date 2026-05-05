@@ -15,7 +15,7 @@ from datetime import timedelta
 import time
 import ast
 from werkzeug.utils import secure_filename
-# import multiprocessing
+import threading
 import uuid
 import pathlib
 import shutil
@@ -131,79 +131,6 @@ def validate_code(code):
         if isinstance(node, ast.Attribute):
             if node.attr.startswith("__") or node.attr in forbidden_attrs:
                 raise ValueError(f"Forbidden attribute access: {node.attr}")
-
-# def run_code_process(code, dataframes, result_queue):
-#     try:
-#         import pandas as pd
-#         import numpy as np
-#         from RestrictedPython import compile_restricted, safe_builtins, utility_builtins
-#         from RestrictedPython.Guards import guarded_iter_unpack_sequence
-#         from RestrictedPython.Eval import default_guarded_getitem, default_guarded_getiter
-
-#         for func in ['read_csv', 'read_excel', 'read_json', 'read_sql', 'read_pickle', 'to_csv', 'to_excel']:
-#             setattr(pd, func, None)
-
-#         builtins = safe_builtins.copy()
-#         builtins.update(utility_builtins)
-        
-#         safe_globals = {
-#             "__builtins__": builtins,
-#             "pd": pd,
-#             "np": np,
-#             "_getitem_": default_guarded_getitem,
-#             "_getiter_": default_guarded_getiter,
-#             "_write_": lambda x: x,
-#             "_iter_unpack_sequence_": guarded_iter_unpack_sequence,
-#             **dataframes
-#         }
-        
-#         compiled = compile_restricted(code, '<string>', 'exec')
-#         exec(compiled, safe_globals)
-        
-#         raw_result = safe_globals.get("result", None)
-        
-#         if isinstance(raw_result, pd.DataFrame):
-#             raw_result = raw_result.head(100).to_dict(orient="records")
-
-#         result_queue.put({"success": True, "data": raw_result})
-        
-#     except Exception as e:
-#         result_queue.put({"success": False, "error": str(e)})
-
-# def execute_with_timeout(code, dataframes, timeout_seconds=30):
-#     result_queue = multiprocessing.Queue()
-    
-#     # Create the process
-#     p = multiprocessing.Process(
-#         target=run_code_process, 
-#         args=(code, dataframes, result_queue)
-#     )
-
-#     p.start()
-    
-#     # Wait for the process to finish or timeout
-#     p.join(timeout_seconds)
-    
-#     if p.is_alive():
-#         p.terminate() # Kill process
-#         p.join()    # Wait for it to fully exit
-#         raise TimeoutException("Code execution timed out and was killed.")
-    
-#     # Check if process exited with an error but didn't return a result
-#     if p.exitcode != 0 and result_queue.empty():
-#         raise RuntimeError(f"Worker process crashed with exit code {p.exitcode}")
-    
-#     if not result_queue.empty():
-#         res = result_queue.get()
-#         if res["success"]:
-#             return res["data"]
-#         else:
-#             raise RuntimeError(res["error"])
-    
-#     raise RuntimeError("Process exited without returning a result.")
-
-
-import threading
 
 def execute_with_timeout(code, dataframes, timeout_seconds=30):
     result_container = {"result": None, "error": None}
@@ -600,6 +527,9 @@ def index():
 def serve_css():
     return send_from_directory(".", "style.css")
 
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(".", "favicon.ico")
 
 if __name__ == "__main__":
     # Check if we are in the main process (not the reloader)
@@ -607,5 +537,4 @@ if __name__ == "__main__":
         print("🚀 First boot: Cleaning up old session data...")
         power_wash_storage()
     
-    # multiprocessing.freeze_support() 
     app.run(host="127.0.0.1", port=5000, debug=True)
