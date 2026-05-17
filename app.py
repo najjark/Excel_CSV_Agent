@@ -224,7 +224,7 @@ def ask_agent(question, dataframes, retries=2, delay=1):
     for attempt in range(retries):
         try:
             response = client.models.generate_content(
-                model="gemini-3.1-flash-lite-preview",
+                model="gemini-3.1-flash-lite",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     max_output_tokens=300,
