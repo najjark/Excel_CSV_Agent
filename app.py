@@ -143,9 +143,6 @@ def execute_with_timeout(code, dataframes, timeout_seconds=30):
             from RestrictedPython.Guards import guarded_iter_unpack_sequence
             from RestrictedPython.Eval import default_guarded_getitem, default_guarded_getiter
 
-            for func in ['read_csv', 'read_excel', 'read_json', 'read_sql', 'read_pickle', 'to_csv', 'to_excel']:
-                setattr(pd, func, None)
-
             builtins = safe_builtins.copy()
             builtins.update(utility_builtins)
             
