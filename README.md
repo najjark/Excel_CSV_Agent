@@ -10,12 +10,12 @@ You can also inspect any uploaded file by hovering over it (column names and typ
 
 ## Screenshots
 
-<div align="center">
-  <img src="screenshots/main_page.png" width="900"/>
-  <img src="screenshots/sample_question.png" width="900"/>
-  <img src="screenshots/answer_with_analysis.png" width="900"/>
-  <img src="screenshots/data_preview.png" width="900"/>
-</div>
+<p align="center">
+<img src="screenshots/main_page.png" width="860"/>
+<img src="screenshots/sample_question.png" width="800"/>
+<img src="screenshots/answer_with_analysis.png" width="830"/>
+<img src="screenshots/data_preview.png" width="700"/>
+</p>
 
 
 ## Features
